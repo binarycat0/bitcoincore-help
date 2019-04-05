@@ -1,0 +1,51 @@
+version: "3"
+
+services:
+
+  ui_base:
+    build: ./front
+    image: bitcoincore-help-ui:base
+
+  middle_base:
+    build: ./middle
+    image: bitcoincore-help-middle:base
+
+  middle:
+    image: bitcoincore-help-middle:base
+    volumes:
+      - ./middle/src:/usr/app
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    command: "gunicorn main:main_web_app \
+              --bind 0.0.0.0:8000 \
+              --worker-class aiohttp.GunicornWebWorker \
+              --reload \
+              --chdir /usr/app \
+              -w 4"
+    depends_on:
+      - ui_base
+      - middle_base
+    networks:
+      - net
+
+  ui:
+    image: bitcoincore-help-ui:base
+    volumes:
+      - ./front/package.json:/usr/app/package.json
+      - ./front/public:/usr/app/public
+      - ./front/src:/usr/app/src
+      - .env:/usr/app/.env
+    ports:
+      - "127.0.0.1:3000:3000"
+    command: "npm run start"
+    depends_on:
+      - middle
+    links:
+      - middle
+    networks:
+      - net
+
+networks:
+  net:
